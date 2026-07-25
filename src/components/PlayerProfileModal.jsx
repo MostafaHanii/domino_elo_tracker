@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { useElo } from '../context/EloContext';
 import { X, Flame } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
@@ -52,7 +53,7 @@ export default function PlayerProfileModal({ player, onClose }) {
 
   if (!player || !stats) return null;
 
-  return (
+  return createPortal(
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content animate-fade-in" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
@@ -103,6 +104,7 @@ export default function PlayerProfileModal({ player, onClose }) {
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

@@ -1,16 +1,56 @@
-# React + Vite
+# 🎲 Dominoes Elo Tracker
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+A beautiful, mobile-first Progressive Web App (PWA) designed to track Elo ratings for 2v2 Dominoes matches among a group of friends. 
 
-Currently, two official plugins are available:
+Built with React (Vite) and styled with a custom glassmorphism design system, this app features a persistent cloud backend powered by Supabase, enabling seamless cross-device synchronization.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## ✨ Features
 
-## React Compiler
+- **Individual Elo Math:** Advanced rating algorithm that calculates expected scores for *each individual player* against the enemy team's average. This protects lower-rated players ("underdogs") from massive penalties when playing alongside highly-rated friends against average opponents.
+- **Dynamic Leaderboard:** Real-time rankings of all registered players.
+- **Rapid Rematch Flow:** Easily log multiple sequential games between the same teams without having to re-select players every time.
+- **Undo Match:** Instantly undo the most recent match and perfectly reverse the exact Elo points that were exchanged.
+- **Offline Fallback:** If Supabase is unreachable or not configured, the app quietly falls back to LocalStorage so you can still track games locally.
+- **PWA Ready:** Installable directly to your iOS or Android home screen for a native app feel.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## 🛠 Tech Stack
 
-## Expanding the Oxlint configuration
+- **Frontend:** React, Vite, React Context API
+- **Backend/DB:** Supabase (PostgreSQL)
+- **Styling:** Custom Vanilla CSS with CSS Variables and Glassmorphism
+- **Icons:** Lucide React
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+## 🚀 Local Development Setup
+
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/YourUsername/domino_elo_tracker.git
+   cd domino_elo_tracker
+   ```
+
+2. **Install dependencies:**
+   ```bash
+   npm install
+   ```
+
+3. **Configure Environment Variables:**
+   Create a `.env.local` file in the root directory and add your Supabase keys:
+   ```env
+   VITE_SUPABASE_URL=your-project-url
+   VITE_SUPABASE_ANON_KEY=your-publishable-anon-key
+   ```
+
+4. **Start the development server:**
+   ```bash
+   npm run dev
+   ```
+   Open `http://localhost:5173` in your browser.
+
+## 🗄️ Database Setup (Supabase)
+
+To set up the cloud database, navigate to your Supabase project's SQL Editor and run the contents of the `supabase_schema.sql` file provided in this repository. This will automatically create the required `players` and `matches` tables along with the appropriate Row Level Security (RLS) policies.
+
+## ☁️ Deployment
+
+This project is optimized for zero-config deployment on **Vercel** or **Netlify**.
+Simply import your GitHub repository into Vercel, add the two `VITE_SUPABASE_*` environment variables in the project settings, and deploy!

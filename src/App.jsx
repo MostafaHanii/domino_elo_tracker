@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { useElo } from './context/EloContext';
-import { Trophy, Users, History, Activity } from 'lucide-react';
+import { Users, History, Trophy, Swords, Activity } from 'lucide-react';
 import PlayerList from './components/PlayerList';
 import MatchForm from './components/MatchForm';
 import Leaderboard from './components/Leaderboard';
 import MatchHistory from './components/MatchHistory';
+import HeadToHead from './components/HeadToHead';
 
 function App() {
   const { loading } = useElo();
@@ -51,6 +52,13 @@ function App() {
           <History size={18} style={{ marginBottom: '-4px', marginRight: '6px' }} />
           History
         </div>
+        <div 
+          className={`tab ${activeTab === 'rivals' ? 'active' : ''}`}
+          onClick={() => setActiveTab('rivals')}
+        >
+          <Swords size={18} style={{ marginBottom: '-4px', marginRight: '6px' }} />
+          Rivals
+        </div>
       </div>
 
       <div className="content">
@@ -58,6 +66,7 @@ function App() {
         {activeTab === 'match' && <MatchForm onSuccess={() => setActiveTab('leaderboard')} />}
         {activeTab === 'players' && <PlayerList />}
         {activeTab === 'history' && <MatchHistory />}
+        {activeTab === 'rivals' && <HeadToHead />}
       </div>
     </div>
   );

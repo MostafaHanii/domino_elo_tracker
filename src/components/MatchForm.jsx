@@ -9,10 +9,12 @@ export default function MatchForm({ onSuccess }) {
   const [teamB2, setTeamB2] = useState('');
   const [winner, setWinner] = useState('');
   const [error, setError] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
 
   const handleSubmit = (e) => {
     e.preventDefault();
     setError('');
+    setSuccessMsg('');
     
     const selectedPlayers = [teamA1, teamA2, teamB1, teamB2];
     
@@ -28,7 +30,9 @@ export default function MatchForm({ onSuccess }) {
     }
 
     recordMatch([teamA1, teamA2], [teamB1, teamB2], winner);
-    onSuccess();
+    setSuccessMsg(`Match recorded! Team ${winner} won.`);
+    setWinner('');
+    setTimeout(() => setSuccessMsg(''), 3000);
   };
 
   if (players.length < 4) {
@@ -55,6 +59,7 @@ export default function MatchForm({ onSuccess }) {
       <h2 style={{ textAlign: 'center', marginBottom: '2rem' }}>Record Match</h2>
       
       {error && <div style={{ color: 'var(--danger-color)', marginBottom: '1rem', textAlign: 'center' }}>{error}</div>}
+      {successMsg && <div style={{ color: 'var(--accent-color)', marginBottom: '1rem', textAlign: 'center', fontWeight: 'bold' }}>{successMsg}</div>}
 
       <form onSubmit={handleSubmit} className="flex-col" style={{ gap: '2rem' }}>
         

@@ -114,7 +114,8 @@ export const EloProvider = ({ children }) => {
       team_b_player1_id: teamBIds[0],
       team_b_player2_id: teamBIds[1],
       winning_team: winningTeam,
-      elo_change: averageChange, // Now represents the average points exchanged per player
+      elo_change: averageChange,
+      player_deltas: deltas,
       created_at: new Date().toISOString()
     };
 
@@ -134,8 +135,38 @@ export const EloProvider = ({ children }) => {
     setMatches(prev => [newMatch, ...prev]);
   };
 
+  const editPlayer = async (id, newName) => {
+    const updatedPlayers = players.map(p => p.id === id ? { ...p, name: newName } : p);
+    if (supabase) await supabase.from('players').update({ name: newName }).eq('id', id);
+    setPlayers(updatedPlayers);
+  };
+
+  const undoLastMatch = async () => {
+    if (matches.length === 0) return;
+    const lastMatch = matches[0];
+    
+    const updatedPlayers = players.map(player => {
+      if (lastMatch.player_deltas && lastMatch.player_deltas[player.id] !== undefined) {
+        return { ...player, elo: player.elo - lastMatch.player_deltas[player.id] };
+      }
+      return player;
+    });
+
+    if (supabase) {
+      await supabase.from('matches').delete().eq('id', lastMatch.id);
+      for (const player of updatedPlayers) {
+        if (lastMatch.player_deltas && lastMatch.player_deltas[player.id] !== undefined) {
+           await supabase.from('players').update({ elo: player.elo }).eq('id', player.id);
+        }
+      }
+    }
+
+    setPlayers(updatedPlayers);
+    setMatches(prev => prev.slice(1));
+  };
+
   return (
-    <EloContext.Provider value={{ players, matches, loading, addPlayer, recordMatch }}>
+    <EloContext.Provider value={{ players, matches, loading, addPlayer, recordMatch, editPlayer, undoLastMatch }}>
       {children}
     </EloContext.Provider>
   );

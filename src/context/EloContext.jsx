@@ -137,13 +137,27 @@ export const EloProvider = ({ children }) => {
 
   const editPlayer = async (id, newName) => {
     const updatedPlayers = players.map(p => p.id === id ? { ...p, name: newName } : p);
-    if (supabase) await supabase.from('players').update({ name: newName }).eq('id', id);
+    
+    if (supabase) {
+      const { error } = await supabase.from('players').update({ name: newName }).eq('id', id);
+      if (error) {
+        console.error(error);
+        alert("Failed to save to database. You might need to run the updated SQL schema.");
+        return;
+      }
+    }
+    
     setPlayers(updatedPlayers);
   };
 
   const undoLastMatch = async () => {
     if (matches.length === 0) return;
     const lastMatch = matches[0];
+    
+    if (!lastMatch.player_deltas) {
+      alert("Cannot undo this match! It was recorded before the Undo feature was added, so its exact points weren't tracked.");
+      return;
+    }
     
     const updatedPlayers = players.map(player => {
       if (lastMatch.player_deltas && lastMatch.player_deltas[player.id] !== undefined) {
@@ -153,7 +167,12 @@ export const EloProvider = ({ children }) => {
     });
 
     if (supabase) {
-      await supabase.from('matches').delete().eq('id', lastMatch.id);
+      const { error } = await supabase.from('matches').delete().eq('id', lastMatch.id);
+      if (error) {
+        console.error(error);
+        alert("Failed to delete match from database. You might need to run the updated SQL schema.");
+        return;
+      }
       for (const player of updatedPlayers) {
         if (lastMatch.player_deltas && lastMatch.player_deltas[player.id] !== undefined) {
            await supabase.from('players').update({ elo: player.elo }).eq('id', player.id);

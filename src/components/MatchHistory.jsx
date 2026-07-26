@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useElo } from '../context/EloContext';
-import { Undo2 } from 'lucide-react';
+import { Undo2, Info } from 'lucide-react';
+import MatchDetailsModal from './MatchDetailsModal';
 
 export default function MatchHistory() {
   const { matches, players, undoLastMatch } = useElo();
+  const [selectedMatch, setSelectedMatch] = useState(null);
 
   const getPlayerName = (id) => {
     const player = players.find(p => p.id === id);
@@ -25,18 +27,26 @@ export default function MatchHistory() {
       ) : (
         <div className="flex-col">
           {matches.map((match) => (
-            <div key={match.id} style={{ 
-              padding: '1rem', 
-              background: 'rgba(255,255,255,0.05)', 
-              borderRadius: '8px',
-              borderLeft: `4px solid ${match.winning_team === 'A' ? '#3b82f6' : '#10b981'}`
-            }}>
+            <div 
+              key={match.id} 
+              onClick={() => setSelectedMatch(match)}
+              style={{ 
+                padding: '1rem', 
+                background: 'rgba(255,255,255,0.05)', 
+                borderRadius: '8px',
+                borderLeft: `4px solid ${match.winning_team === 'A' ? '#3b82f6' : '#10b981'}`,
+                cursor: 'pointer',
+                transition: 'background 0.2s ease'
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+            >
               <div className="flex-row space-between" style={{ marginBottom: '0.5rem' }}>
                 <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
                   {new Date(match.created_at).toLocaleDateString()}
                 </span>
-                <span style={{ fontSize: '0.9rem', fontWeight: 'bold', color: 'var(--accent-color)' }}>
-                  ±{match.elo_change} Elo
+                <span style={{ fontSize: '0.9rem', fontWeight: 'bold', color: 'var(--accent-color)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  ±{match.elo_change} Elo <Info size={14} style={{ opacity: 0.7 }} />
                 </span>
               </div>
               <div className="flex-col" style={{ gap: '0.25rem' }}>
@@ -52,6 +62,13 @@ export default function MatchHistory() {
             </div>
           ))}
         </div>
+      )}
+
+      {selectedMatch && (
+        <MatchDetailsModal 
+          match={selectedMatch} 
+          onClose={() => setSelectedMatch(null)} 
+        />
       )}
     </div>
   );

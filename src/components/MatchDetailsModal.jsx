@@ -71,13 +71,6 @@ export default function MatchDetailsModal({ match, onClose }) {
             </div>
           </div>
 
-          <div style={{ padding: '1rem', background: 'rgba(59, 130, 246, 0.1)', borderRadius: '12px', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
-            <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-primary)' }}>
-              <strong>Why are the points different?</strong><br/>
-              The Elo math engine calculates expected scores <em>individually</em>. If an underdog (low rating) teams up with a pro (high rating) and they lose, the underdog loses fewer points than the pro, because the pro was mathematically expected to carry the team!
-            </p>
-          </div>
-
           {!match.player_deltas && (
             <p style={{ textAlign: 'center', color: 'var(--danger-color)', fontSize: '0.9rem', marginTop: '1rem' }}>
               Detailed point breakdowns are not available for legacy matches.

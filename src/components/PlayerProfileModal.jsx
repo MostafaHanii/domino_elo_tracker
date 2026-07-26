@@ -5,7 +5,7 @@ import { X, Flame } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
 export default function PlayerProfileModal({ player, onClose }) {
-  const { matches } = useElo();
+  const { matches, players } = useElo();
 
   const stats = useMemo(() => {
     if (!player) return null;
@@ -15,6 +15,7 @@ export default function PlayerProfileModal({ player, onClose }) {
     let peakElo = player.elo;
     let currentStreak = 0;
     let streakBroken = false;
+    const partners = {};
 
     // Reconstruct Elo history (working backwards)
     let currentTempElo = player.elo;
@@ -29,8 +30,18 @@ export default function PlayerProfileModal({ player, onClose }) {
 
       const playerWon = (isTeamA && match.winning_team === 'A') || (isTeamB && match.winning_team === 'B');
 
-      if (playerWon) wins++;
-      else losses++;
+      if (playerWon) {
+        wins++;
+        
+        // Track partner for Best Duo
+        const partnerId = isTeamA 
+          ? (match.team_a_player1_id === player.id ? match.team_a_player2_id : match.team_a_player1_id)
+          : (match.team_b_player1_id === player.id ? match.team_b_player2_id : match.team_b_player1_id);
+        
+        partners[partnerId] = (partners[partnerId] || 0) + 1;
+      } else {
+        losses++;
+      }
 
       // Streak logic
       if (!streakBroken) {
@@ -46,9 +57,15 @@ export default function PlayerProfileModal({ player, onClose }) {
       }
     });
 
+    let bestPartnerId = null;
+    let maxWins = 0;
+    for (const [id, count] of Object.entries(partners)) {
+      if (count > maxWins) { maxWins = count; bestPartnerId = id; }
+    }
+
     const winRate = wins + losses > 0 ? Math.round((wins / (wins + losses)) * 100) : 0;
 
-    return { wins, losses, winRate, peakElo, currentStreak, history };
+    return { wins, losses, winRate, peakElo, currentStreak, history, bestPartnerId, maxWins };
   }, [player, matches]);
 
   if (!player || !stats) return null;
@@ -83,6 +100,16 @@ export default function PlayerProfileModal({ player, onClose }) {
               </span>
             </div>
           </div>
+
+          {stats.bestPartnerId && (
+            <div style={{ background: 'rgba(255,255,255,0.05)', padding: '1rem', borderRadius: '12px', textAlign: 'center', marginBottom: '1.5rem' }}>
+              <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Best Duo</span>
+              <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--text-primary)', marginTop: '0.25rem' }}>
+                {players.find(p => p.id === stats.bestPartnerId)?.name}
+              </div>
+              <div style={{ fontSize: '0.8rem', color: 'var(--accent-color)' }}>{stats.maxWins} wins together</div>
+            </div>
+          )}
 
           {stats.history.length > 1 && (
             <div style={{ marginTop: '2rem', height: '200px' }}>

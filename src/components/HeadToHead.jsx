@@ -3,7 +3,7 @@ import { useElo } from '../context/EloContext';
 import { Swords } from 'lucide-react';
 
 export default function HeadToHead() {
-  const { players, matches } = useElo();
+  const { players, matches, activeGame } = useElo();
   const [player1Id, setPlayer1Id] = useState('');
   const [player2Id, setPlayer2Id] = useState('');
 
@@ -14,7 +14,9 @@ export default function HeadToHead() {
     let p2Wins = 0;
     let totalMatches = 0;
 
-    matches.forEach(match => {
+    const filteredMatches = matches.filter(m => (m.game_type || 'dominoes') === activeGame);
+
+    filteredMatches.forEach(match => {
       // Check if they are on OPPOSING teams
       const p1InA = match.team_a_player1_id === player1Id || match.team_a_player2_id === player1Id;
       const p1InB = match.team_b_player1_id === player1Id || match.team_b_player2_id === player1Id;

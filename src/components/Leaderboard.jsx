@@ -4,10 +4,12 @@ import { Trophy } from 'lucide-react';
 import PlayerProfileModal from './PlayerProfileModal';
 
 export default function Leaderboard() {
-  const { players } = useElo();
+  const { players, activeGame } = useElo();
   const [selectedPlayer, setSelectedPlayer] = useState(null);
 
-  const sortedPlayers = [...players].sort((a, b) => b.elo - a.elo);
+  const getRating = (player) => player.ratings?.[activeGame] || player.elo || 1200;
+
+  const sortedPlayers = [...players].sort((a, b) => getRating(b) - getRating(a));
 
   return (
     <div className="glass-panel animate-fade-in">
@@ -29,11 +31,15 @@ export default function Leaderboard() {
                 <span style={{ fontSize: '1.2rem', fontWeight: 'bold', width: '30px', color: index === 0 ? '#fbbf24' : 'var(--text-secondary)' }}>
                   #{index + 1}
                 </span>
-                <span style={{ fontSize: '1.1rem' }}>{player.name}</span>
+                <span style={{ fontWeight: '600' }}>{player.name}</span>
               </div>
-              <div style={{ fontSize: '1.2rem', fontWeight: '600', color: 'var(--primary-color)' }}>
-                {player.elo}
-              </div>
+              <span style={{ 
+                fontWeight: 'bold', 
+                color: index === 0 ? '#fbbf24' : 'var(--text-primary)',
+                fontSize: '1.1rem'
+              }}>
+                {getRating(player)}
+              </span>
             </div>
           ))}
         </div>

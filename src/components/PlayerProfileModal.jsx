@@ -5,24 +5,27 @@ import { X, Flame } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
 export default function PlayerProfileModal({ player, onClose }) {
-  const { matches, players } = useElo();
+  const { matches, players, activeGame } = useElo();
 
   const stats = useMemo(() => {
     if (!player) return null;
 
+    const filteredMatches = matches.filter(m => (m.game_type || 'dominoes') === activeGame);
+    const startRating = player.ratings?.[activeGame] || player.elo || 1200;
+
     let wins = 0;
     let losses = 0;
-    let peakElo = player.elo;
+    let peakElo = startRating;
     let currentStreak = 0;
     let streakBroken = false;
     const partners = {};
 
     // Reconstruct Elo history (working backwards)
-    let currentTempElo = player.elo;
-    const history = [{ match: 'Now', elo: player.elo }];
+    let currentTempElo = startRating;
+    const history = [{ match: 'Now', elo: startRating }];
 
     // matches are ordered newest first
-    matches.forEach((match, index) => {
+    filteredMatches.forEach((match, index) => {
       const isTeamA = match.team_a_player1_id === player.id || match.team_a_player2_id === player.id;
       const isTeamB = match.team_b_player1_id === player.id || match.team_b_player2_id === player.id;
       
@@ -53,7 +56,7 @@ export default function PlayerProfileModal({ player, onClose }) {
       if (match.player_deltas && match.player_deltas[player.id] !== undefined) {
         currentTempElo -= match.player_deltas[player.id];
         if (currentTempElo > peakElo) peakElo = currentTempElo;
-        history.unshift({ match: `Game ${matches.length - index}`, elo: currentTempElo });
+        history.unshift({ match: `Game ${filteredMatches.length - index}`, elo: currentTempElo });
       }
     });
 
@@ -81,11 +84,11 @@ export default function PlayerProfileModal({ player, onClose }) {
         <div className="modal-body">
           <div className="stat-grid">
             <div className="stat-card">
-              <span className="stat-label">Current Elo</span>
-              <span className="stat-value">{player.elo}</span>
+              <span className="stat-label">Current Rating</span>
+              <span className="stat-value">{player.ratings?.[activeGame] || player.elo || 1200}</span>
             </div>
             <div className="stat-card">
-              <span className="stat-label">Peak Elo</span>
+              <span className="stat-label">Peak Rating</span>
               <span className="stat-value">{stats.peakElo}</span>
             </div>
             <div className="stat-card">

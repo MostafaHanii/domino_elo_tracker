@@ -2,25 +2,30 @@ import React, { useState } from 'react';
 import { useElo } from '../context/EloContext';
 
 export default function MatchForm({ onSuccess }) {
-  const { players, recordMatch } = useElo();
-  const [teamA1, setTeamA1] = useState('');
-  const [teamA2, setTeamA2] = useState('');
-  const [teamB1, setTeamB1] = useState('');
-  const [teamB2, setTeamB2] = useState('');
+  const { players, recordMatch, activeGame } = useElo();
+  const [teamA, setTeamA] = useState(['', '']);
+  const [teamB, setTeamB] = useState(['', '']);
   const [winner, setWinner] = useState('');
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+
+  const is1v1 = activeGame === 'pingpong';
 
   const handleSubmit = (e) => {
     e.preventDefault();
     setError('');
     setSuccessMsg('');
     
-    const selectedPlayers = [teamA1, teamA2, teamB1, teamB2];
+    const selectedPlayers = is1v1 ? [teamA[0], teamB[0]] : [teamA[0], teamA[1], teamB[0], teamB[1]];
     
+    if (selectedPlayers.some(p => !p)) {
+        setError("Please select all required players.");
+        return;
+    }
+
     // Validate uniqueness
-    if (new Set(selectedPlayers).size !== 4) {
-      setError("Please select 4 unique players.");
+    if (new Set(selectedPlayers).size !== selectedPlayers.length) {
+      setError("Please select unique players.");
       return;
     }
 
@@ -29,27 +34,31 @@ export default function MatchForm({ onSuccess }) {
       return;
     }
 
-    recordMatch([teamA1, teamA2], [teamB1, teamB2], winner);
+    recordMatch(is1v1 ? [teamA[0]] : teamA, is1v1 ? [teamB[0]] : teamB, winner);
     setSuccessMsg(`Match recorded! Team ${winner} won.`);
     setWinner('');
+    setTeamA(['', '']);
+    setTeamB(['', '']);
     setTimeout(() => setSuccessMsg(''), 3000);
   };
 
-  if (players.length < 4) {
+  if (players.length < (is1v1 ? 2 : 4)) {
     return (
       <div className="glass-panel animate-fade-in text-center">
         <h2>Record Match</h2>
-        <p>You need at least 4 players to record a match. Currently have {players.length}.</p>
+        <p>You need at least {is1v1 ? 2 : 4} players to record a match. Currently have {players.length}.</p>
       </div>
     );
   }
 
+  const getRating = (player) => player.ratings?.[activeGame] || player.elo || 1200;
+
   const PlayerSelect = ({ value, onChange, label }) => (
     <div className="flex-col" style={{ gap: '0.25rem', flex: 1 }}>
       <label style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>{label}</label>
-      <select value={value} onChange={e => onChange(e.target.value)} required>
+      <select value={value} onChange={e => onChange(e.target.value)} required={!label.includes("2") || !is1v1}>
         <option value="" disabled>Select Player</option>
-        {players.map(p => <option key={p.id} value={p.id}>{p.name} ({p.elo})</option>)}
+        {players.map(p => <option key={p.id} value={p.id}>{p.name} ({getRating(p)})</option>)}
       </select>
     </div>
   );
@@ -67,8 +76,8 @@ export default function MatchForm({ onSuccess }) {
         <div style={{ padding: '1.5rem', background: 'rgba(59, 130, 246, 0.1)', borderRadius: '12px', border: '1px solid rgba(59, 130, 246, 0.3)' }}>
           <h3 style={{ color: '#60a5fa', marginBottom: '1rem', marginTop: 0 }}>Team A</h3>
           <div className="flex-row">
-            <PlayerSelect value={teamA1} onChange={setTeamA1} label="Player 1" />
-            <PlayerSelect value={teamA2} onChange={setTeamA2} label="Player 2" />
+            <PlayerSelect value={teamA[0]} onChange={(val) => setTeamA([val, teamA[1]])} label="Player 1" />
+            {!is1v1 && <PlayerSelect value={teamA[1]} onChange={(val) => setTeamA([teamA[0], val])} label="Player 2" />}
           </div>
         </div>
 
@@ -78,8 +87,8 @@ export default function MatchForm({ onSuccess }) {
         <div style={{ padding: '1.5rem', background: 'rgba(16, 185, 129, 0.1)', borderRadius: '12px', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
           <h3 style={{ color: '#34d399', marginBottom: '1rem', marginTop: 0 }}>Team B</h3>
           <div className="flex-row">
-            <PlayerSelect value={teamB1} onChange={setTeamB1} label="Player 1" />
-            <PlayerSelect value={teamB2} onChange={setTeamB2} label="Player 2" />
+            <PlayerSelect value={teamB[0]} onChange={(val) => setTeamB([val, teamB[1]])} label="Player 1" />
+            {!is1v1 && <PlayerSelect value={teamB[1]} onChange={(val) => setTeamB([teamB[0], val])} label="Player 2" />}
           </div>
         </div>
 

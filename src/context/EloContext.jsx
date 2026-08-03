@@ -8,6 +8,7 @@ export const EloProvider = ({ children }) => {
   const [players, setPlayers] = useState([]);
   const [matches, setMatches] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [activeGame, setActiveGame] = useState('dominoes'); // 'dominoes', 'pingpong', 'pingpong_doubles'
 
   // Load initial data
   useEffect(() => {
@@ -42,15 +43,16 @@ export const EloProvider = ({ children }) => {
   }, [players, matches, loading]);
 
   const addPlayer = async (name) => {
-    // Calculate starting elo (average of all players, or 1200)
+    // Calculate starting elo for active game
     const startingElo = players.length > 0 
-      ? Math.round(players.reduce((sum, p) => sum + p.elo, 0) / players.length)
+      ? Math.round(players.reduce((sum, p) => sum + (p.ratings?.[activeGame] || 1200), 0) / players.length)
       : 1200;
 
     const newPlayer = {
       id: crypto.randomUUID(),
       name,
-      elo: startingElo,
+      elo: startingElo, // keep legacy sync
+      ratings: { dominoes: 1200, pingpong: 1200, pingpong_doubles: 1200, [activeGame]: startingElo },
       created_at: new Date().toISOString()
     };
 
@@ -65,13 +67,18 @@ export const EloProvider = ({ children }) => {
   };
 
   const recordMatch = async (teamAIds, teamBIds, winningTeam) => {
-    // Get player objects
-    const teamA = teamAIds.map(id => players.find(p => p.id === id));
-    const teamB = teamBIds.map(id => players.find(p => p.id === id));
+    const is1v1 = activeGame === 'pingpong';
 
-    // Calculate Team Ratings (Averages)
-    const teamARating = (teamA[0].elo + teamA[1].elo) / 2;
-    const teamBRating = (teamB[0].elo + teamB[1].elo) / 2;
+    // Get player objects
+    const teamA = teamAIds.map(id => players.find(p => p.id === id)).filter(Boolean);
+    const teamB = teamBIds.map(id => players.find(p => p.id === id)).filter(Boolean);
+
+    // Get ratings
+    const getRating = (player) => player.ratings?.[activeGame] || player.elo || 1200;
+
+    // Calculate Team Ratings (Averages for 2v2, direct for 1v1)
+    const teamARating = is1v1 ? getRating(teamA[0]) : (getRating(teamA[0]) + getRating(teamA[1])) / 2;
+    const teamBRating = is1v1 ? getRating(teamB[0]) : (getRating(teamB[0]) + getRating(teamB[1])) / 2;
 
     const K = 32;
 
@@ -87,32 +94,43 @@ export const EloProvider = ({ children }) => {
     
     // Team A players
     const teamAWon = winningTeam === 'A';
-    deltas[teamA[0].id] = getIndividualDelta(teamA[0].elo, teamBRating, teamAWon);
-    deltas[teamA[1].id] = getIndividualDelta(teamA[1].elo, teamBRating, teamAWon);
+    deltas[teamA[0].id] = getIndividualDelta(getRating(teamA[0]), teamBRating, teamAWon);
+    if (!is1v1) deltas[teamA[1].id] = getIndividualDelta(getRating(teamA[1]), teamBRating, teamAWon);
 
     // Team B players
     const teamBWon = winningTeam === 'B';
-    deltas[teamB[0].id] = getIndividualDelta(teamB[0].elo, teamARating, teamBWon);
-    deltas[teamB[1].id] = getIndividualDelta(teamB[1].elo, teamARating, teamBWon);
+    deltas[teamB[0].id] = getIndividualDelta(getRating(teamB[0]), teamARating, teamBWon);
+    if (!is1v1) deltas[teamB[1].id] = getIndividualDelta(getRating(teamB[1]), teamARating, teamBWon);
     
     // Create new players array with updated ratings
     const updatedPlayers = players.map(player => {
       if (deltas[player.id] !== undefined) {
-        return { ...player, elo: player.elo + deltas[player.id] };
+        const newRating = getRating(player) + deltas[player.id];
+        return { 
+          ...player, 
+          elo: activeGame === 'dominoes' ? newRating : player.elo, // legacy sync
+          ratings: { ...(player.ratings || {}), [activeGame]: newRating }
+        };
       }
       return player;
     });
 
     // Store the average absolute change for the match history UI
-    const teamAChangeTotal = Math.abs(deltas[teamA[0].id]) + Math.abs(deltas[teamA[1].id]);
-    const averageChange = Math.round(teamAChangeTotal / 2);
+    let averageChange;
+    if (is1v1) {
+      averageChange = Math.abs(deltas[teamA[0].id]);
+    } else {
+      const teamAChangeTotal = Math.abs(deltas[teamA[0].id]) + Math.abs(deltas[teamA[1].id]);
+      averageChange = Math.round(teamAChangeTotal / 2);
+    }
 
     const newMatch = {
       id: crypto.randomUUID(),
+      game_type: activeGame,
       team_a_player1_id: teamAIds[0],
-      team_a_player2_id: teamAIds[1],
+      team_a_player2_id: is1v1 ? null : teamAIds[1],
       team_b_player1_id: teamBIds[0],
-      team_b_player2_id: teamBIds[1],
+      team_b_player2_id: is1v1 ? null : teamBIds[1],
       winning_team: winningTeam,
       elo_change: averageChange,
       player_deltas: deltas,
@@ -124,8 +142,8 @@ export const EloProvider = ({ children }) => {
       await supabase.from('matches').insert([newMatch]);
       // Update each player individually in DB
       for (const player of updatedPlayers) {
-        if (teamAIds.includes(player.id) || teamBIds.includes(player.id)) {
-           await supabase.from('players').update({ elo: player.elo }).eq('id', player.id);
+        if (deltas[player.id] !== undefined) {
+           await supabase.from('players').update({ elo: player.elo, ratings: player.ratings }).eq('id', player.id);
         }
       }
     }
@@ -161,7 +179,13 @@ export const EloProvider = ({ children }) => {
     
     const updatedPlayers = players.map(player => {
       if (lastMatch.player_deltas && lastMatch.player_deltas[player.id] !== undefined) {
-        return { ...player, elo: player.elo - lastMatch.player_deltas[player.id] };
+        const gameMode = lastMatch.game_type || 'dominoes';
+        const newRating = (player.ratings?.[gameMode] || player.elo) - lastMatch.player_deltas[player.id];
+        return { 
+          ...player, 
+          elo: gameMode === 'dominoes' ? newRating : player.elo,
+          ratings: { ...(player.ratings || {}), [gameMode]: newRating }
+        };
       }
       return player;
     });
@@ -175,7 +199,7 @@ export const EloProvider = ({ children }) => {
       }
       for (const player of updatedPlayers) {
         if (lastMatch.player_deltas && lastMatch.player_deltas[player.id] !== undefined) {
-           await supabase.from('players').update({ elo: player.elo }).eq('id', player.id);
+           await supabase.from('players').update({ elo: player.elo, ratings: player.ratings }).eq('id', player.id);
         }
       }
     }
@@ -185,7 +209,7 @@ export const EloProvider = ({ children }) => {
   };
 
   return (
-    <EloContext.Provider value={{ players, matches, loading, addPlayer, recordMatch, editPlayer, undoLastMatch }}>
+    <EloContext.Provider value={{ players, matches, loading, activeGame, setActiveGame, addPlayer, recordMatch, editPlayer, undoLastMatch }}>
       {children}
     </EloContext.Provider>
   );

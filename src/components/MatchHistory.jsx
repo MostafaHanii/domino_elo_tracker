@@ -4,8 +4,10 @@ import { Undo2, Info } from 'lucide-react';
 import MatchDetailsModal from './MatchDetailsModal';
 
 export default function MatchHistory() {
-  const { matches, players, undoLastMatch } = useElo();
+  const { matches, players, undoLastMatch, activeGame } = useElo();
   const [selectedMatch, setSelectedMatch] = useState(null);
+
+  const filteredMatches = matches.filter(m => (m.game_type || 'dominoes') === activeGame);
 
   const getPlayerName = (id) => {
     const player = players.find(p => p.id === id);
@@ -16,17 +18,17 @@ export default function MatchHistory() {
     <div className="glass-panel animate-fade-in">
       <div className="flex-row space-between" style={{ marginBottom: '1.5rem' }}>
         <h2 style={{ margin: 0 }}>Match History</h2>
-        {matches.length > 0 && (
+        {filteredMatches.length > 0 && (
           <button onClick={undoLastMatch} className="btn" style={{ background: 'transparent', border: '1px solid var(--text-secondary)', padding: '0.4rem 0.8rem', fontSize: '0.9rem' }}>
             <Undo2 size={16} /> Undo Last Match
           </button>
         )}
       </div>
-      {matches.length === 0 ? (
+      {filteredMatches.length === 0 ? (
         <p>No matches recorded yet.</p>
       ) : (
         <div className="flex-col">
-          {matches.map((match) => (
+          {filteredMatches.map((match) => (
             <div 
               key={match.id} 
               onClick={() => setSelectedMatch(match)}
